@@ -1,0 +1,90 @@
+# -*- coding: utf-8 -*-
+'''
+Instructions:
+    This is a simple screen recording script.
+    Edit the settings below to make a video in the format you would like.
+'''
+import time
+##################################################
+# --- SETTINGS ---
+#NAME YOUR TIMELAPSE
+video_name = 'time_lapse_output_raw_'+str(time.time())+'.avi'
+#YOUR VIDEO DIMENSIONS
+video_width = 1920
+video_height = 1080
+# video_width = 2560
+# video_height = 1440
+#YOUR VIDEO FRAMES PER SECOND
+video_fps = 24
+#TIME BETWEEN SCREEN SHOTS
+#sleep_time = 0.0
+##################################################
+# UNLESS YOU ARE A PYTHON PROGRAMMER IGNORE EVERYTHING BELOW!!!
+import numpy as np
+import cv2
+import win32gui, win32ui, win32con, win32api
+import datetime
+
+def screen_shot(region=None):    
+    hwin = win32gui.GetDesktopWindow()
+    if region:
+            left,top,x2,y2 = region
+            width = x2 - left + 1
+            height = y2 - top + 1
+    else:
+        width = win32api.GetSystemMetrics(win32con.SM_CXVIRTUALSCREEN)
+        height = win32api.GetSystemMetrics(win32con.SM_CYVIRTUALSCREEN)
+        left = win32api.GetSystemMetrics(win32con.SM_XVIRTUALSCREEN)
+        top = win32api.GetSystemMetrics(win32con.SM_YVIRTUALSCREEN)
+    hwindc = win32gui.GetWindowDC(hwin)
+    srcdc = win32ui.CreateDCFromHandle(hwindc)
+    memdc = srcdc.CreateCompatibleDC()
+    bmp = win32ui.CreateBitmap()
+    bmp.CreateCompatibleBitmap(srcdc, width, height)
+    memdc.SelectObject(bmp)
+    memdc.BitBlt((0, 0), (width, height), srcdc, (left, top), win32con.SRCCOPY)
+    signedIntsArray = bmp.GetBitmapBits(True)
+    img = np.fromstring(signedIntsArray, dtype='uint8')
+    img.shape = (height,width,4)
+    srcdc.DeleteDC()
+    memdc.DeleteDC()
+    win32gui.ReleaseDC(hwin, hwindc)
+    win32gui.DeleteObject(bmp.GetHandle())
+    return cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
+
+def main():
+    global video_width
+    global video_height
+    global video_name
+    global video_fps
+    global left_click_radius
+    global clicked_left
+    global clicked_left_point
+    #global sleep_time
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    video = cv2.VideoWriter(video_name,fourcc, video_fps, (video_width,video_height), isColor=True)    
+    start = datetime.datetime.now()
+    print('Recording started at '+str(start)+' press ctrl+c with the terminal selected to stop.')
+    it = 0
+    while it < 4:
+        print(it)
+        it +=1
+        time.sleep(1)
+    try:
+        #make the video
+        while(1):
+            screen = screen_shot(region=(0,0,video_width,video_height))
+            screen = cv2.cvtColor(screen, cv2.COLOR_BGR2RGB)
+            video.write(screen)
+            #time.sleep(sleep_time) 
+    #end the video        
+    except KeyboardInterrupt:
+        video.release() 
+        stop = datetime.datetime.now()
+        delta = stop-start
+        print('Recording Complete, length: '+str(delta))
+        time.sleep(10)
+    video.release() 
+#Run the script
+if __name__ == '__main__':  
+    main()
